@@ -1,0 +1,79 @@
+---
+
+- name: Ensure apt packages are present
+  apt:
+    name: "{{ item }}"
+    state: present
+    update_cache: yes
+    cache_valid_time: 3600
+  with_items: bacula_web_apt_packages
+
+- name: Ensure php.ini cgi.fix_pathinfo line configured
+  lineinfile:
+    dest: "{{ item.dest }}"
+    line: "{{ item.line }}"
+    regexp: "{{ item.regexp }}"
+  with_items:
+    - dest: "{{ bacula_web_php_ini_file }}"
+      line: "cgi.fix_pathinfo=0"
+      regexp: ";cgi.fix_pathinfo=1"
+    - dest: "{{ bacula_web_php_ini_file }}"
+      line: "date.timezone = America/Denver"
+      regexp: ";date.timezone.*"
+  notify:
+    - Restart php5-fpm
+
+- name: Assert variables are present
+  assert:
+    that: "{{ item }}"
+  with_items:
+    - "{{ bacula_web_htpasswd_path != '' }}"
+    - "{{ bacula_web_htpasswd_name != '' }}"
+    - "{{ bacula_web_htpasswd_password != '' }}"
+    - "{{ bacula_web_htpasswd_owner != '' }}"
+    - "{{ bacula_web_htpasswd_group != '' }}"
+    - "{{ bacula_web_db_host != '' }}"
+    - "{{ bacula_web_db_port != '' }}"
+    - "{{ bacula_web_db_name != '' }}"
+    - "{{ bacula_web_db_user != '' }}"
+    - "{{ bacula_web_db_password != '' }}"    
+
+- name: Ensure htpasswd configured
+  htpasswd:
+    path: "{{ bacula_web_htpasswd_path }}"
+    name: "{{ bacula_web_htpasswd_name }}"
+    password: "{{ bacula_web_htpasswd_password }}"
+    owner: "{{ bacula_web_htpasswd_owner }}"
+    group: "{{ bacula_web_htpasswd_group }}"
+    mode: "0640"
+
+- name: Ensure nginx default server configured
+  template:
+    src: nginx.conf
+    dest: /etc/nginx/sites-available/default
+  notify:
+    - Restart nginx
+
+- name: Ensure bacula-web is downloaded
+  get_url:
+    url: "http://www.bacula-web.org/download.html?file=files/bacula-web.org/downloads/bacula-web-{{ bacula_web_version }}.tgz"
+    dest: "/tmp/bacula-web-{{ bacula_web_version }}.tgz"
+
+- name: Ensure bacula-web unarchived and copied into place with htpasswd ownership
+  unarchive:
+    src: "{{ bacula_web_tmp_dir }}/bacula-web-{{ bacula_web_version }}.tgz"
+    dest: "{{ bacula_web_nginx_app_dir }}"
+    group: "{{ bacula_web_htpasswd_group }}"
+    copy: no
+
+- name: Ensure nginx public index.html is absent
+  file:
+    dest: "{{ bacula_web_nginx_app_dir }}/index.html"
+    state: absent
+
+- name: Ensure config.php db configured
+  template:
+    src: config.php
+    dest: "{{ bacula_web_nginx_app_dir }}/application/config/config.php"
+  notify:
+    - Restart nginx

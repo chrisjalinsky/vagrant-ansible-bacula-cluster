@@ -1,0 +1,26 @@
+---
+
+- name: Restart bacula-director
+  service:
+    name: bacula-director
+    state: restarted
+
+- name: Restart bacula-sd
+  service:
+    name: bacula-sd
+    state: restarted
+
+- name: Restart bacula-fd
+  service:
+    name: bacula-fd
+    state: restarted
+
+- name: Restart bacula-server
+  service:
+    name: bacula-server
+    state: restarted
+
+- name: Restart bacula-client
+  service:
+    name: bacula-client
+    state: restarted

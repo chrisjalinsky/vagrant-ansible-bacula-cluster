@@ -1,0 +1,12 @@
+[bacula-fd-hosts]
+baculafd1.dev.lan
+
+[bacula-sd-hosts]
+
+[bacula-dir-hosts]
+baculadir1.dev.lan
+
+[bacula-hosts-environment:children]
+bacula-fd-hosts
+bacula-dir-hosts
+bacula-sd-hosts

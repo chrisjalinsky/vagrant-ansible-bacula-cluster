@@ -1,0 +1,41 @@
+#jinja2: trim_blocks: True, lstrip_blocks: True
+{% if bacula_dir_conf_jobdefs_vars is defined and bacula_dir_conf_jobdefs_vars is defined and bacula_dir_conf_jobdefs_vars|length > 0 %}
+  {% for jobdef_item in bacula_dir_conf_jobdefs_vars %}
+    {% if jobdef_item.name is defined %}
+{{ jobdef_item.name }} {
+        {% for k,v in jobdef_item.items() %}
+          {% if k == 'vars' %}
+            {% for confitem in v %}
+              {% for key,val in confitem.items() %}
+                {% if key == 'Include' or key == 'Exclude' %}
+  {{key}} {
+                  {% for binclude,bincludeval in val.items() %}
+                    {% if binclude == 'Options' %}
+    {{binclude}} {
+                      {% for bitem in bincludeval %}
+                        {% for bvalk,bvalv in bitem.items() %}
+      {{bvalk}} = {{bvalv}}
+                        {% endfor %}
+                      {% endfor %}
+    }
+                    {% endif %}
+                    {% if binclude == 'Files' %}
+                      {% for bitem in bincludeval %}
+                        {% for bvalk,bvalv in bitem.items() %}
+    {{bvalk}} = {{bvalv}}
+                        {% endfor %}
+                      {% endfor %}
+                    {% endif %}
+                  {% endfor %}
+  }
+                {% else %}
+  {{key}} = {{val}}
+              {% endif %}
+            {% endfor %}
+          {% endfor %}
+        {% endif %}
+      {% endfor %}
+}
+    {% endif %}
+  {% endfor %}
+{% endif %}

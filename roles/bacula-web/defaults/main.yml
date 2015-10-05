@@ -1,0 +1,26 @@
+---
+bacula_web_version: "7.0.3"
+bacula_web_tmp_dir: "/tmp"
+bacula_web_nginx_app_dir: "/usr/share/nginx/html"
+
+bacula_web_apt_packages:
+  - nginx
+  - apache2-utils
+  - php5-fpm
+  - php5-mysql
+  - php5-gd
+  - python-passlib
+
+bacula_web_php_ini_file: "/etc/php5/fpm/php.ini"
+
+bacula_web_htpasswd_path: ""
+bacula_web_htpasswd_name: ""
+bacula_web_htpasswd_password: ""
+bacula_web_htpasswd_owner: ""
+bacula_web_htpasswd_group: ""
+
+bacula_web_db_host: ""
+bacula_web_db_port: ""
+bacula_web_db_name: ""
+bacula_web_db_user: ""
+bacula_web_db_password: ""

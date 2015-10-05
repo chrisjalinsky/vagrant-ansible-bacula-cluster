@@ -1,0 +1,57 @@
+---
+
+- name: Ensure Percona key added for apt
+  apt_key:
+    #keyserver: "keys.gnupg.net"
+    keyserver: "212.51.156.193"
+    id: "1C4CBDCDCD2EFD2A"
+    state: present
+
+- name: Add repo to sources
+  apt_repository: repo='deb http://repo.percona.com/apt trusty main' state=present
+
+- name: Add src repo to sources
+  apt_repository: repo='deb-src http://repo.percona.com/apt trusty main' state=present
+
+- name: Update Apt and download Percona
+  apt:
+    name: percona-xtrabackup
+    state: present
+    update_cache: yes
+    cache_valid_time: 3600
+
+- name: Assert variables are present
+  assert:
+    that: "{{ item }}"
+  with_items:
+    - "{{ percona_xtra_user != '' }}"
+    - "{{ percona_xtra_group != '' }}"
+    - "{{ percona_xtra_db_user != '' }}"
+    - "{{ percona_xtra_db_group != '' }}"
+    - "{{ percona_xtra_db_password != '' }}"
+    - "{{ percona_xtra_db_datadir != '' }}"
+
+- name: Ensure user added to db group
+  shell: "gpasswd -a {{ percona_xtra_user }} {{ percona_xtra_db_group }}"
+
+- name: Ensure directories present
+  file:
+    dest: "{{ item.dest }}"
+    state: "{{ item.state|default('directory') }}"
+    recurse: "{{ item.recurse|default('yes') }}"
+    mode: "{{ item.mode|default('0755') }}"
+    owner: "{{ item.owner|default(percona_xtra_user) }}"
+    group: "{{ item.group|default(percona_xtra_group) }}"
+  with_items: percona_xtra_data_dirs
+  when: percona_xtra_data_dirs is defined and percona_xtra_data_dirs|length > 0
+
+- name: Ensure permissions set on db datadir files
+  file:
+    dest: "{{ percona_xtra_db_datadir }}"
+    group: "{{ percona_xtra_db_group }}"
+    recurse: yes
+    mode: "0770"
+
+#- name: Ensure db files owned
+#  command: "find {{ percona_xtra_db_datadir }} -type d -exec chmod 770 '{}' \;"
+    

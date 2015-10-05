@@ -1,0 +1,31 @@
+---
+
+- name: Ensure apt packages are present
+  apt:
+    name: "{{ item.name }}"
+    update_cache: yes
+    cache_valid_time: 3600
+    state: present
+  with_items:
+    - name: bacula-sd
+  tags:
+    - packages
+
+- name: Ensure bacula-sd.conf is templated
+  template:
+    src: bacula-sd.conf
+    dest: "{{ bacula_sd_conf_dir }}/{{ bacula_sd_conf_file }}"
+    backup: yes
+    owner: root
+    group: root
+    mode: "0640"
+  tags:
+    - configuration
+
+- name: Ensure bacula-sd.conf valid
+  shell: "bacula-sd -tc {{ bacula_dir_home_dir }}/{{ bacula_sd_conf_file }}"
+  tags:
+    - configuration
+    - validation
+  notify:
+    - Restart bacula-sd

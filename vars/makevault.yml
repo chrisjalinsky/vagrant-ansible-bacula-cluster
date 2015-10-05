@@ -1,0 +1,342 @@
+# mysql role vars
+mysql_root_password: rootpassword
+mysql_databases:
+  - name: bacula
+    encoding: utf8
+    collation: utf8_general_ci
+mysql_users:
+  - name: bacula
+    host: "%"
+    password: ClXlEAZLeClH
+    priv: "*.*:ALL"
+    
+# percona xtra vars dependent on mysql vars
+percona_xtra_user: "root"
+percona_xtra_group: "root"
+percona_xtra_db_group: "mysql"
+percona_xtra_db_user: "bacula"
+percona_xtra_db_password: "ClXlEAZLeClH"
+percona_xtra_db_datadir: "/var/lib/mysql"
+percona_xtra_data_dirs:
+  - dest: "/data"
+    owner: "root"
+  - dest: "/data/backups"
+
+# bacula-web role vars:
+bacula_web_htpasswd_path: "/etc/nginx/htpasswd.users"
+bacula_web_htpasswd_name: "admin"
+bacula_web_htpasswd_password: "adminpw"
+bacula_web_htpasswd_owner: "root"
+bacula_web_htpasswd_group: "www-data"
+
+bacula_web_db_host: "localhost"
+bacula_web_db_port: "3306"
+bacula_web_db_name: "bacula"
+bacula_web_db_user: "bacula"
+bacula_web_db_password: "ClXlEAZLeClH"
+
+# bacula-dir role vars
+bacula_dir_user: "bacula"
+bacula_dir_group: "bacula"
+
+bacula_dir_mysql_db_address: ""
+bacula_dir_mysql_db_name: "bacula"
+bacula_dir_mysql_db_user: "bacula"
+bacula_dir_mysql_db_password: "ClXlEAZLeClH"
+bacula_dir_migrate_command: "/usr/share/bacula-director/make_mysql_tables"
+
+bacula_dir_version: "5.2.6"
+bacula_dir_container_dir: /bacula
+bacula_dir_home_dir: /etc/bacula
+bacula_dir_conf_file: "{{ bacula_dir_home_dir }}/bacula-dir.conf"
+bacula_dir_confd_dir: "{{ bacula_dir_home_dir }}/conf.d"
+bacula_dir_scripts_dir: "{{ bacula_dir_home_dir }}/scripts"
+bacula_dir_backup_dir: "/bacula/backup"
+bacula_dir_restore_dir: "/bacula/restore"
+
+# NOTICE: many of the following keys and values have wrapping single/double quotes as shown in the default configuration files.
+# The follwing are the defaults given in the default installation and should be overridden.
+# These vars are used to create conf.d files, which are referenced in the bacula-dir.conf file
+
+bacula_dir_conf_directors_vars:
+  - name: "Director"
+    vars:
+      - Name: "{{ ansible_fqdn }}-dir"
+      - DIRport: "9101"
+      - QueryFile: '"/etc/bacula/scripts/query.sql"'
+      - WorkingDirectory: '"/var/lib/bacula"'
+      - PidDirectory: '"/var/run/bacula"'
+      - "Maximum Concurrent Jobs": "1"
+      - Password: '"consolepw"'
+      - Messages: "Daemon"
+      - DirAddress: "0.0.0.0"
+
+bacula_dir_conf_jobdefs_vars:
+  - name: "JobDefs"
+    vars:
+      - Name: '"DefaultJob"'
+      - Type: "Backup"
+      - Level: "Incremental"
+      - Client: "{{ ansible_fqdn }}-fd"
+      - FileSet: '"Full Set"'
+      - Schedule: '"WeeklyCycle"'
+      - Storage: "File"
+      - Messages: "Standard"
+      - Pool: "File"
+      - Priority: "10"
+      - "Write Bootstrap": '"/var/lib/bacula/%c.bsr"'
+
+bacula_dir_conf_jobs_vars:
+  - name: "Job"
+    vars:
+      - Name: '"BackupLocalFiles"'
+      - JobDefs: '"DefaultJob"'
+  - name: "Job"
+    vars:
+      - Name: '"BackupCatalog"'
+      - JobDefs: '"DefaultJob"'
+      - Level: "Full"
+      - FileSet: '"Catalog"'
+      - Schedule: '"WeeklyCycleAfterBackup"'
+      - RunBeforeJob: '"/etc/bacula/scripts/make_catalog_backup.pl MyCatalog"'
+      - RunAfterJob: '"/etc/bacula/scripts/delete_catalog_backup"'
+      - "Write Bootstrap": '"/var/lib/bacula/%n.bsr"'
+      - Priority: "11"
+  - name: "Job"
+    vars:
+      - Name: '"RestoreLocalFiles"'
+      - Type: "Restore"
+      - Client: "{{ ansible_fqdn }}-fd"
+      - FileSet: '"Full Set"'                 
+      - Storage: "File"                     
+      - Pool: "Default"
+      - Messages: "Standard"
+      - Where: "/bacula/restore"
+  - name: "Job"
+    vars:
+      - Name: '"Backupbaculafd1"'
+      - JobDefs: "DefaultJob"
+      - Client: "baculafd1.dev.lan-fd"
+      - FileSet: '"Home and Etc"'
+      - Pool: "RemoteFile"
+
+bacula_dir_conf_filesets_vars:
+  - name: "FileSet"
+    vars:
+      - Name: '"Full Set"'
+        Include:
+          Options:
+            - signature: "MD5"
+            - compression: "GZIP"
+          Files:
+            - File: "/"
+        Exclude:
+          Files:
+            - File: "/var/lib/bacula"
+            - File: "/bacula"
+            - File: "/proc"
+            - File: "/tmp"
+            - File: "/.journal"
+            - File: "/.fsck"
+  - name: "FileSet"
+    vars:
+      - Name: '"Home and Etc"'
+        Include:
+          Options:
+            - signature: "MD5"
+            - compression: "GZIP"
+          Files:
+            - File: "/home"
+            - File: "/etc"
+        Exclude:
+          Files:
+            - File: "/home/bacula/not_important"
+  - name: "FileSet"
+    vars:
+      - Name: '"Catalog"'
+        Include:
+          Options:
+            - signature: "MD5"
+          Files:
+            - File: '"/var/lib/bacula/bacula.sql"'
+
+bacula_dir_conf_schedules_vars:
+  - name: "Schedule"
+    vars:
+      - Name: '"WeeklyCycle"'
+      - Run: "Full 1st sun at 23:05"
+      - Run: "Differential 2nd-5th sun at 23:05"
+      - Run: "Incremental mon-sat at 23:05"
+  - name: "Schedule"
+    vars:
+      - Name: '"WeeklyCycleAfterBackup"'
+      - Run: "Full sun-sat at 23:10"
+
+bacula_dir_conf_clients_vars:
+  - name: "Client"
+    vars:
+      - Name: "{{ ansible_fqdn }}-fd"
+      - Address: "localhost"
+      - FDPort: "9102"
+      - Catalog: "MyCatalog"
+      - Password: '"consolepw"'
+      - "File Retention": "30 days"
+      - "Job Retention": "6 months"
+      - AutoPrune: "yes"
+  - name: "Client"
+    vars:
+      - Name: "baculafd1.dev.lan-fd"
+      - Address: "baculafd1.dev.lan"
+      - FDPort: "9102"
+      - Catalog: "MyCatalog"
+      - Password: '"consolepw"'
+      - "File Retention": "30 days"
+      - "Job Retention": "6 months"
+      - AutoPrune: "yes"
+
+bacula_dir_conf_storages_vars:
+  - name: "Storage"
+    vars:
+      - Name: "File"
+      - Address: "{{ ansible_fqdn }}"
+      - SDPort: "9103"
+      - Password: '"consolepw"'
+      - Device: "FileStorage"
+      - "Media Type": "File"
+
+bacula_dir_conf_catalogs_vars:
+  - name: "Catalog"
+    vars:
+      - Name: "MyCatalog"
+      - dbname: '"{{ bacula_dir_mysql_db_name }}"; DB Address = "{{ bacula_dir_mysql_db_address }}"; dbuser = "{{ bacula_dir_mysql_db_user }}"; dbpassword = "{{ bacula_dir_mysql_db_password }}"'
+
+bacula_dir_conf_messages_vars:
+  - name: "Messages"
+    vars:
+      - Name: "Standard"
+      - mailcommand: '"/usr/sbin/bsmtp -h localhost -f \"\(Bacula\) \<%r\>\" -s \"Bacula: %t %e of %c %l\" %r"'
+      - operatorcommand: '"/usr/sbin/bsmtp -h localhost -f \"\(Bacula\) \<%r\>\" -s \"Bacula: Intervention needed for %j\" %r"'
+      - mail: "root = all, !skipped"           
+      - operator: "root = mount"
+      - console: "all, !skipped, !saved"
+      - append: '"/var/log/bacula/bacula.log" = all, !skipped'
+      - catalog: "all"
+  - name: "Messages"
+    vars:
+      - Name: "Daemon"
+      - mailcommand: '"/usr/sbin/bsmtp -h localhost -f \"\(Bacula\) \<%r\>\" -s \"Bacula daemon message\" %r"'
+      - mail: "root = all, !skipped"           
+      - console: "all, !skipped, !saved"
+      - append: '"/var/log/bacula/bacula.log" = all, !skipped'
+
+bacula_dir_conf_pools_vars:
+  - name: "Pool"
+    vars:
+      - Name: "Default"
+      - "Pool Type": "Backup"
+      - Recycle: "yes"
+      - AutoPrune: "yes"
+      - "Volume Retention": "365 days"
+  - name: "Pool"
+    vars:
+      - Name: "File"
+      - "Pool Type": "Backup"
+      - "Label Format": "Local-"
+      - Recycle: "yes"
+      - AutoPrune: "yes"
+      - "Volume Retention": "365 days"
+      - "Maximum Volume Bytes": "50G"
+      - "Maximum Volumes": "100"
+  - name: "Pool"
+    vars:
+      - Name: "Scratch"
+      - "Pool Type": "Backup"
+  - name: "Pool"
+    vars:
+      - Name: "RemoteFile"
+      - "Pool Type": "Backup"
+      - "Label Format": "Remote-"
+      - Recycle: "yes"
+      - AutoPrune: "yes"
+      - "Volume Retention": "365 days"
+      - "Maximum Volume Bytes": "50G"
+      - "Maximum Volumes": "100"
+
+bacula_dir_conf_consoles_vars:
+  - name: "Console"
+    vars:
+      - Name: "{{ ansible_fqdn }}-mon"
+      - Password: '"consolepw"'
+      - CommandACL: "status, .status"
+
+
+
+##  Bacula storage daemon vars defaults:
+bacula_sd_conf_dir: /etc/bacula
+bacula_sd_conf_file: bacula-sd.conf
+bacula_sd_conf_vars:
+  storage:
+    - Name: "{{ ansible_fqdn }}-sd"
+    - SDPort: "9103"
+    - WorkingDirectory: "/var/lib/bacula"
+    - "Pid Directory": "/var/run/bacula"
+    - "Maximum Concurrent Jobs": "20"
+    - SDAddress: "{{ ansible_fqdn }}"
+  director:
+    - Name: "{{ ansible_fqdn }}-dir"
+    # The following password field in quoted, so must pass those through
+    - Password: '"consolepw"'
+  restricted_director:
+    - Name: "{{ ansible_fqdn }}-mon"
+    # The following password field in quoted, so must pass those through
+    - Password: '"consolepw"'
+    - Monitor: "yes"
+  devices:
+    - name: "Device"
+      vars:
+        - Name: "FileStorage"
+        - "Media Type": "File"
+        - "Archive Device": "/bacula/backup"
+        - LabelMedia: "yes;"
+        - "Random Access": "Yes;"
+        - AutomaticMount: "yes;"
+        - RemovableMedia: "no;"
+        - AlwaysOpen: "no;"
+  messages:
+    - Name: "Standard"
+    - director: "{{ ansible_fqdn }}-dir = all"
+
+##  Bacula file daemon vars defaults:
+bacula_fd_conf_dir: /etc/bacula
+bacula_fd_conf_file: bacula-fd.conf
+bacula_fd_conf_vars:
+  director:
+    - Name: "{{ ansible_fqdn }}-dir"
+    # The following password field in quoted, so must pass those through
+    - Password: '"consolepw"'
+  restricted_director:
+    - Name: "{{ ansible_fqdn }}-mon"
+    # The following password field in quoted, so must pass those through
+    - Password: '"consolepw"'
+    - Monitor: "yes"
+  file_daemon:
+    - Name: "{{ ansible_fqdn }}-fd"
+    - FDPort: "9102"
+    - WorkingDirectory: "/var/lib/bacula"
+    - "Pid Directory": "/var/run/bacula"
+    - "Maximum Concurrent Jobs": "20"
+    - FDAddress: "127.0.0.1"
+  messages:
+    - Name: "Standard"
+    - director: "{{ ansible_fqdn }}-dir = all, !skipped, !restored"
+
+##  Bacula user agent vars defaults:
+bacula_ua_conf_dir: /etc/bacula
+bacula_ua_conf_file: bconsole.conf
+bacula_ua_conf_vars:
+  director:
+    - Name: "{{ ansible_fqdn }}-dir"
+    - DIRport: "9101"
+    - address: "0.0.0.0"
+    # The following password field in quoted, so must pass those through
+    - Password: '"consolepw"'

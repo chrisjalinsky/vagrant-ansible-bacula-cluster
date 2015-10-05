@@ -1,0 +1,46 @@
+---
+
+- name: Ensure apt packages are present
+  apt:
+    name: "{{ item.name }}"
+    update_cache: yes
+    cache_valid_time: 3600
+    state: present
+  with_items:
+    - name: bacula-fd
+  tags:
+    - packages
+
+- name: Ensure bacula dirs exist and owned as follows
+  file:
+    dest: "{{item.dest}}"
+    state: directory
+    recurse: "{{ item.recurse | default('yes') }}"
+    owner: "{{ item.owner | default(bacula_fd_user) }}"
+    group: "{{ item.group | default(bacula_fd_group) }}"
+    mode: "{{ item.mode | default('0755') }}"
+  with_items:
+    - dest: "{{ bacula_fd_dir }}"
+      mode: "0700"
+    - dest: "{{ bacula_fd_restore_dir }}"
+  tags:
+    - configuration
+
+- name: Ensure bacula-fd.conf is templated
+  template:
+    src: bacula-fd.conf
+    dest: "{{ bacula_fd_conf_dir }}/{{ bacula_fd_conf_file }}"
+    backup: yes
+    owner: root
+    group: root
+    mode: "0640"
+  tags:
+    - configuration
+
+- name: Ensure bacula-fd.conf valid
+  shell: "bacula-fd -tc {{ bacula_fd_conf_dir }}/{{ bacula_fd_conf_file }}"
+  tags:
+    - configuration
+    - validation
+  notify:
+    - Restart bacula-fd

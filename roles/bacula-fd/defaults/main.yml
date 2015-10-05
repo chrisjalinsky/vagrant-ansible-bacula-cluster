@@ -1,0 +1,27 @@
+---
+bacula_fd_user: bacula
+bacula_fd_group: bacula
+bacula_fd_conf_dir: /etc/bacula
+bacula_fd_conf_file: bacula-fd.conf
+bacula_fd_dir: "/bacula"
+bacula_fd_restore_dir: "/bacula/restore"
+bacula_fd_conf_vars:
+  director:
+    - Name: "{{ ansible_fqdn }}-dir"
+    # The following password field in quoted, so must pass those through
+    - Password: "'password'"
+  restricted_director:
+    - Name: "{{ ansible_fqdn }}-mon"
+    # The following password field in quoted, so must pass those through
+    - Password: "'password'"
+    - Monitor: "yes"
+  file_daemon:
+    - Name: "{{ ansible_fqdn }}-fd"
+    - FDPort: "9102"
+    - WorkingDirectory: "/var/lib/bacula"
+    - "Pid Directory": "/var/run/bacula"
+    - "Maximum Concurrent Jobs": "20"
+    - FDAddress: "127.0.0.1"
+  messages:
+    - Name: "Standard"
+    - director: "{{ ansible_fqdn }}-dir = all, !skipped, !restored"

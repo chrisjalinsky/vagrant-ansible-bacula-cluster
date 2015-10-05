@@ -1,0 +1,159 @@
+---  
+
+- name: Ensure apt packages are present
+  apt:
+    name: "{{ item.name }}"
+    update_cache: yes
+    cache_valid_time: 3600
+    state: present
+  with_items:
+    - name: bacula-server
+    - name: bacula-client
+  tags:
+    - packages
+
+- name: Ensure bacula dirs exist and owned as follows
+  file:
+    dest: "{{item.dest}}"
+    state: directory
+    recurse: "{{ item.recurse | default('no') }}"
+    owner: "{{ item.owner | default(bacula_dir_user) }}"
+    group: "{{ item.group | default(bacula_dir_group) }}"
+    mode: "{{ item.mode | default('0755') }}"
+  with_items:
+    - dest: "{{ bacula_dir_home_dir }}"
+      owner: "root"
+      group: "root"
+    - dest: "{{ bacula_dir_confd_dir }}"
+      owner: "root"
+      group: "root"
+    - dest: "{{ bacula_dir_scripts_dir }}"
+      owner: "root"
+      group: "root"
+    - dest: "{{ bacula_dir_container_dir }}"
+      mode: "0700"
+      recurse: "yes"
+    - dest: "{{ bacula_dir_backup_dir }}"
+    - dest: "{{ bacula_dir_restore_dir }}"
+  tags:
+    - configuration
+
+- name: Ensure scripts/delete_catalog_backup is executable
+  file:
+    dest: "{{ bacula_dir_scripts_dir }}/delete_catalog_backup"
+    mode: "0755"
+  tags:
+    - configuration
+
+- name: Ensure migration script template is present and executable
+  template:
+    src: "bacula_dir_migration.sh"
+    dest: "{{ bacula_dir_migrate_command }}"
+    mode: "0755"
+  tags:
+    - migration
+
+- name: Migrate bacula database after installation
+  command: "{{ bacula_dir_migrate_command }}"
+  tags:
+    - migration
+
+
+- name: Ensure bacula conf.d fragments are templated to host before final assembly 
+  template:
+    src: "bacula-confd-{{ item.name }}-template.j2"
+    dest: "{{ bacula_dir_confd_dir }}/{{ item.order }}_{{ item.name }}.conf"
+  with_items:
+    - name: "directors"
+      order: "a"
+    - name: "jobdefs"
+      order: "b"
+    - name: "jobs"
+      order: "c"
+    - name: "filesets"
+      order: "d"
+    - name: "schedules"
+      order: "e"
+    - name: "clients"
+      order: "f"
+    - name: "storages"
+      order: "g"
+    - name: "catalogs"
+      order: "h"
+    - name: "messages"
+      order: "i"
+    - name: "pools"
+      order: "j"
+    - name: "consoles"
+      order: "k"
+  tags:
+    - configuration
+
+- name: Ensure bacula-dir.conf assembled 
+  assemble:
+    src: "{{ bacula_dir_confd_dir }}/"
+    dest: "{{ bacula_dir_conf_file }}"
+    owner: "root"
+    group: "bacula"
+    backup: yes
+    #ansible 2.0
+    #validate: "bacula-dir -tc {{ bacula_dir_home_dir }}/bacula-dir.conf"
+  tags:
+    - configuration
+
+- name: Ensure bconsole.conf is templated
+  template:
+    src: bconsole.conf
+    dest: "{{ bacula_ua_conf_dir }}/{{ bacula_ua_conf_file }}"
+    backup: yes
+    owner: bacula
+    group: bacula
+    mode: "0640"
+  tags:
+    - configuration
+
+- name: Ensure bacula-sd.conf is templated
+  template:
+    src: bacula-sd.conf
+    dest: "{{ bacula_sd_conf_dir }}/{{ bacula_sd_conf_file }}"
+    backup: yes
+    owner: bacula
+    group: bacula
+    mode: "0640"
+  tags:
+    - configuration
+
+- name: Ensure bacula-sd.conf valid
+  shell: "bacula-sd -tc {{ bacula_dir_home_dir }}/{{ bacula_sd_conf_file }}"
+  tags:
+    - configuration
+    - validation
+  notify:
+    - Restart bacula-sd
+
+- name: Ensure bacula-fd.conf is templated
+  template:
+    src: bacula-fd.conf
+    dest: "{{ bacula_fd_conf_dir }}/{{ bacula_fd_conf_file }}"
+    backup: yes
+    owner: root
+    group: root
+    mode: "0640"
+  tags:
+    - configuration
+
+- name: Ensure bacula-fd.conf valid
+  shell: "bacula-fd -tc {{ bacula_fd_conf_dir }}/{{ bacula_fd_conf_file }}"
+  tags:
+    - configuration
+    - validation
+  notify:
+    - Restart bacula-fd
+
+- name: Ensure bacula-dir.conf valid
+  shell: "bacula-dir -tc {{ bacula_dir_home_dir }}/bacula-dir.conf"
+  tags:
+    - configuration
+    - validation
+  notify:
+    - Restart bacula-director

@@ -1,0 +1,23 @@
+---
+# NOTICE: The following are assumed to be setup prior to running the role. Specifically, the mysql db user and password
+
+percona_xtra_user: ""
+percona_xtra_group: ""
+percona_xtra_db_group: ""
+percona_xtra_db_user: ""
+percona_xtra_db_password: ""
+percona_xtra_db_datadir: ""
+
+percona_xtra_data_dirs: []
+
+# For instance, defined in playbook or play > vars_files
+#percona_xtra_user: "root"
+#percona_xtra_group: "root"
+#percona_xtra_db_group: "mysql"
+#percona_xtra_db_user: "bacula"
+#percona_xtra_db_password: "ClXlEAZLeClH"
+#percona_xtra_db_datadir: "/var/lib/mysql"
+#percona_xtra_data_dirs:
+#  - dest: "/data"
+#    owner: "root"
+#  - dest: "/data/backups"
