@@ -119,6 +119,13 @@ bacula_dir_conf_jobs_vars:
       - Client: "baculafd1.dev.lan-fd"
       - FileSet: '"Home and Etc"'
       - Pool: "RemoteFile"
+  - name: "Job"
+    vars:
+      - Name: '"Backupbaculasd1"'
+      - JobDefs: "DefaultJob"
+      - Client: "baculasd1.dev.lan-fd"
+      - FileSet: '"Home and Etc"'
+      - Pool: "RemoteFile"
 
 bacula_dir_conf_filesets_vars:
   - name: "FileSet"
@@ -193,12 +200,30 @@ bacula_dir_conf_clients_vars:
       - "File Retention": "30 days"
       - "Job Retention": "6 months"
       - AutoPrune: "yes"
+  - name: "Client"
+    vars:
+      - Name: "baculasd1.dev.lan-fd"
+      - Address: "baculasd1.dev.lan"
+      - FDPort: "9102"
+      - Catalog: "MyCatalog"
+      - Password: '"consolepw"'
+      - "File Retention": "30 days"
+      - "Job Retention": "6 months"
+      - AutoPrune: "yes"
 
 bacula_dir_conf_storages_vars:
   - name: "Storage"
     vars:
       - Name: "File"
       - Address: "{{ ansible_fqdn }}"
+      - SDPort: "9103"
+      - Password: '"consolepw"'
+      - Device: "FileStorage"
+      - "Media Type": "File"
+  - name: "Storage"
+    vars:
+      - Name: "RemoteFile"
+      - Address: "baculasd1.dev.lan"
       - SDPort: "9103"
       - Password: '"consolepw"'
       - Device: "FileStorage"
@@ -269,9 +294,7 @@ bacula_dir_conf_consoles_vars:
       - Password: '"consolepw"'
       - CommandACL: "status, .status"
 
-
-
-##  Bacula storage daemon vars defaults:
+##  Bacula storage daemon vars for the director node defaults:
 bacula_sd_conf_dir: /etc/bacula
 bacula_sd_conf_file: bacula-sd.conf
 bacula_sd_conf_vars:
@@ -306,7 +329,7 @@ bacula_sd_conf_vars:
     - Name: "Standard"
     - director: "{{ ansible_fqdn }}-dir = all"
 
-##  Bacula file daemon vars defaults:
+##  Bacula file daemon vars for the director node defaults:
 bacula_fd_conf_dir: /etc/bacula
 bacula_fd_conf_file: bacula-fd.conf
 bacula_fd_conf_vars:

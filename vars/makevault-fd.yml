@@ -1,0 +1,22 @@
+---
+
+bacula_fd_conf_vars:
+  director:
+    - Name: "baculadir1.dev.lan-dir"
+    # The following password field in quoted, so must pass those through
+    - Password: '"consolepw"'
+  restricted_director:
+    - Name: "{{ ansible_fqdn }}-mon"
+    # The following password field in quoted, so must pass those through
+    - Password: "'consolepw'"
+    - Monitor: "yes"
+  file_daemon:
+    - Name: "{{ ansible_fqdn }}-fd"
+    - FDPort: "9102"
+    - WorkingDirectory: "/var/lib/bacula"
+    - "Pid Directory": "/var/run/bacula"
+    - "Maximum Concurrent Jobs": "20"
+    - FDAddress: "{{ ansible_fqdn }}"
+  messages:
+    - Name: "Standard"
+    - director: "baculadir1.dev.lan-dir = all, !skipped, !restored"

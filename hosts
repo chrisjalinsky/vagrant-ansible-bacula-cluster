@@ -1,7 +1,9 @@
 [bacula-fd-hosts]
 baculafd1.dev.lan
+baculasd1.dev.lan
 
 [bacula-sd-hosts]
+baculasd1.dev.lan
 
 [bacula-dir-hosts]
 baculadir1.dev.lan

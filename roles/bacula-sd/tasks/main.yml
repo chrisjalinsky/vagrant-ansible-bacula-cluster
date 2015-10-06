@@ -11,6 +11,19 @@
   tags:
     - packages
 
+- name: Ensure bacula sd dirs exist
+  file:
+    dest: "{{item.dest}}"
+    state: directory
+    recurse: "{{ item.recurse | default('yes') }}"
+    owner: "{{ item.owner | default(bacula_sd_user) }}"
+    group: "{{ item.group | default(bacula_sd_group) }}"
+    mode: "{{ item.mode | default('0755') }}"
+  with_items: bacula_sd_dirs
+  when: bacula_sd_dirs is defined and bacula_sd_dirs|length > 0
+  tags:
+    - configuration
+
 - name: Ensure bacula-sd.conf is templated
   template:
     src: bacula-sd.conf
@@ -23,7 +36,7 @@
     - configuration
 
 - name: Ensure bacula-sd.conf valid
-  shell: "bacula-sd -tc {{ bacula_dir_home_dir }}/{{ bacula_sd_conf_file }}"
+  shell: "bacula-sd -tc {{ bacula_sd_conf_dir }}/{{ bacula_sd_conf_file }}"
   tags:
     - configuration
     - validation

@@ -1,9 +1,10 @@
 ---
-bacula_sd_user: bacula
-bacula_sd_group: bacula
-bacula_sd_dirs: []
-bacula_sd_conf_dir: /etc/bacula
-bacula_sd_conf_file: bacula-sd.conf
+bacula_sd_dirs:
+  - dest: "/bacula"
+    recurse: yes
+    mode: "0700"
+    group: "bacula"
+  - dest: "/bacula/backup"
 
 bacula_sd_conf_vars:
   storage:
@@ -12,22 +13,22 @@ bacula_sd_conf_vars:
     - WorkingDirectory: "/var/lib/bacula"
     - "Pid Directory": "/var/run/bacula"
     - "Maximum Concurrent Jobs": "20"
-    - SDAddress: "127.0.0.1"
+    - SDAddress: "{{ ansible_fqdn }}"
   director:
-    - Name: "{{ ansible_fqdn }}-dir"
+    - Name: "baculadir1.dev.lan-dir"
     # The following password field in quoted, so must pass those through
-    - Password: "'password'"
+    - Password: '"consolepw"'
   restricted_director:
-    - Name: "{{ ansible_fqdn }}-mon"
+    - Name: "baculadir1.dev.lan-mon"
     # The following password field in quoted, so must pass those through
-    - Password: "'password'"
+    - Password: '"consolepw"'
     - Monitor: "yes"
   devices:
     - name: "Device"
       vars:
         - Name: "FileStorage"
         - "Media Type": "File"
-        - "Archive Device": "/nonexistant/path/to/file/archive/dir"
+        - "Archive Device": "/bacula/backup"
         - LabelMedia: "yes;"
         - "Random Access": "Yes;"
         - AutomaticMount: "yes;"
@@ -35,4 +36,4 @@ bacula_sd_conf_vars:
         - AlwaysOpen: "no;"
   messages:
     - Name: "Standard"
-    - director: "{{ ansible_fqdn }}-dir = all"
+    - director: "baculadir1.dev.lan-dir = all"

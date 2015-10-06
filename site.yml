@@ -14,7 +14,7 @@
         line: "127.0.1.1"
         regexp: "127.0.1.1"
         state: absent
-    - name: "Build hosts file"
+    - name: Build hosts file
       lineinfile:
         dest: "/etc/hosts"
         regexp: '.*{{ item }}$'
@@ -22,12 +22,13 @@
         state: present
       with_items:
       - "10.0.10.11 baculafd1.dev.lan baculafd1"
+      - "10.0.10.21 baculasd1.dev.lan baculasd1"
       - "10.0.10.31 baculadir1.dev.lan baculadir1"
 
 - hosts: bacula-dir-hosts
   sudo: yes
   vars_files:
-    - vars/makevault.yml
+    - vars/makevault-dir.yml
   roles:
     - role: mysql
     - role: bacula-web
@@ -36,61 +37,14 @@
 
 - hosts: bacula-fd-hosts
   sudo: yes
+  vars_files:
+    - vars/makevault-fd.yml
   roles:
   - role: bacula-fd
-    bacula_fd_conf_vars:
-      director:
-        - Name: "baculadir1.dev.lan-dir"
-        # The following password field in quoted, so must pass those through
-        - Password: '"consolepw"'
-      restricted_director:
-        - Name: "{{ ansible_fqdn }}-mon"
-        # The following password field in quoted, so must pass those through
-        - Password: "'consolepw'"
-        - Monitor: "yes"
-      file_daemon:
-        - Name: "{{ ansible_fqdn }}-fd"
-        - FDPort: "9102"
-        - WorkingDirectory: "/var/lib/bacula"
-        - "Pid Directory": "/var/run/bacula"
-        - "Maximum Concurrent Jobs": "20"
-        - FDAddress: "{{ ansible_fqdn }}"
-      messages:
-        - Name: "Standard"
-        - director: "baculadir1.dev.lan-dir = all, !skipped, !restored"
 
 - hosts: bacula-sd-hosts
   sudo: yes
+  vars_files:
+    - vars/makevault-sd.yml
   roles:
   - role: bacula-sd
-    bacula_sd_conf_vars:
-      storage:
-        - Name: "{{ ansible_fqdn }}-sd"
-        - SDPort: "9103"
-        - WorkingDirectory: "/var/lib/bacula"
-        - "Pid Directory": "/var/run/bacula"
-        - "Maximum Concurrent Jobs": "20"
-        - SDAddress: "127.0.0.1"
-      director:
-        - Name: "{{ ansible_fqdn }}-dir"
-        # The following password field in quoted, so must pass those through
-        - Password: "'password'"
-      restricted_director:
-        - Name: "{{ ansible_fqdn }}-mon"
-        # The following password field in quoted, so must pass those through
-        - Password: "'password'"
-        - Monitor: "yes"
-      devices:
-        - name: "Device"
-          vars:
-            - Name: "FileStorage"
-            - "Media Type": "File"
-            - "Archive Device": "/nonexistant/path/to/file/archive/dir"
-            - LabelMedia: "yes;"
-            - "Random Access": "Yes;"
-            - AutomaticMount: "yes;"
-            - RemovableMedia: "no;"
-            - AlwaysOpen: "no;"
-      messages:
-        - Name: "Standard"
-        - director: "{{ ansible_fqdn }}-dir = all"
